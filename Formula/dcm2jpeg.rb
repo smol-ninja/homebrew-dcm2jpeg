@@ -8,20 +8,12 @@ class Dcm2jpeg < Formula
   license "MIT"
 
   depends_on "python@3.12"
+  depends_on "numpy"
+  depends_on "pillow"
 
   resource "pydicom" do
     url "https://files.pythonhosted.org/packages/d7/6f/55ea163b344c91df2e03c007bebf94781f0817656e2c037d7c5bf86c3bfc/pydicom-3.0.1.tar.gz"
     sha256 "7b8be344b5b62493c9452ba6f5a299f78f8a6ab79786c729b0613698209603ec"
-  end
-
-  resource "Pillow" do
-    url "https://files.pythonhosted.org/packages/1f/42/5c74462b4fd957fcd7b13b04fb3205ff8349236ea74c7c375766d6c82288/pillow-12.1.1.tar.gz"
-    sha256 "9ad8fa5937ab05218e2b6a4cff30295ad35afd2f83ac592e68c0d871bb0fdbc4"
-  end
-
-  resource "numpy" do
-    url "https://files.pythonhosted.org/packages/57/fd/0005efbd0af48e55eb3c7208af93f2862d4b1a56cd78e84309a2d959208d/numpy-2.4.2.tar.gz"
-    sha256 "659a6107e31a83c4e33f763942275fd278b21d095094044eb35569e86a21ddae"
   end
 
   def install
