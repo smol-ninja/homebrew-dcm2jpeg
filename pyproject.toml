@@ -1,6 +1,6 @@
 [project]
 name = "dcm2jpeg"
-version = "1.0.0"
+version = "1.1.0"
 description = "Convert DICOM files to JPEG"
 readme = "README.md"
 requires-python = ">=3.10"
