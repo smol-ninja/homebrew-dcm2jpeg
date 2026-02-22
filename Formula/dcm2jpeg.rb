@@ -7,9 +7,9 @@ class Dcm2jpeg < Formula
   sha256 "59597d3d671383c6deb94ed39687dfac1cab02df8acf767820d291cea53e0cf0"
   license "MIT"
 
-  depends_on "python@3.12"
   depends_on "numpy"
   depends_on "pillow"
+  depends_on "python@3.13"
 
   resource "pydicom" do
     url "https://files.pythonhosted.org/packages/d7/6f/55ea163b344c91df2e03c007bebf94781f0817656e2c037d7c5bf86c3bfc/pydicom-3.0.1.tar.gz"

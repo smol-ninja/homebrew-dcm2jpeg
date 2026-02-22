@@ -38,7 +38,7 @@ def apply_windowing(
 
 def convert_dcm_to_jpeg(dcm_path: Path, output_path: Path) -> None:
     """Read a DICOM file and save it as JPEG."""
-    ds = pydicom.dcmread(str(dcm_path))
+    ds = pydicom.dcmread(dcm_path)
     pixel_array = ds.pixel_array.astype(np.float64)
 
     normalized = apply_windowing(pixel_array, ds)
@@ -46,7 +46,7 @@ def convert_dcm_to_jpeg(dcm_path: Path, output_path: Path) -> None:
     image = Image.fromarray(normalized)
     if image.mode != "RGB":
         image = image.convert("RGB")
-    image.save(str(output_path), "JPEG", quality=95)
+    image.save(output_path, "JPEG", quality=95)
 
 
 def main() -> None:
@@ -80,15 +80,16 @@ def main() -> None:
         print("No .dcm files found.")
         return
 
-    seen_names: dict[str, int] = {}
+    used_names: set[str] = set()
     for dcm_path in dcm_files:
         stem = dcm_path.stem
-        if stem in seen_names:
-            seen_names[stem] += 1
-            out_name = f"{stem}_{seen_names[stem]}.jpeg"
-        else:
-            seen_names[stem] = 0
-            out_name = f"{stem}.jpeg"
+        out_name = f"{stem}.jpeg"
+        if out_name in used_names:
+            counter = 1
+            while f"{stem}_{counter}.jpeg" in used_names:
+                counter += 1
+            out_name = f"{stem}_{counter}.jpeg"
+        used_names.add(out_name)
 
         output_path = output_dir / out_name
         try:

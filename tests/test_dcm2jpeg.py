@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -80,16 +81,73 @@ class TestMain:
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        import sys
-
         sys.argv = ["dcm2jpeg", str(tmp_path)]
         main()
         captured = capsys.readouterr()
         assert "No .dcm files found" in captured.out
 
     def test_nonexistent_directory(self, tmp_path: Path) -> None:
-        import sys
-
         sys.argv = ["dcm2jpeg", str(tmp_path / "nonexistent")]
         with pytest.raises(SystemExit):
             main()
+
+    def test_output_flag(self, tmp_path: Path) -> None:
+        dcm_dir = tmp_path / "input"
+        dcm_dir.mkdir()
+        (dcm_dir / "img.dcm").touch()
+        out_dir = tmp_path / "custom_out"
+
+        ds = MagicMock()
+        ds.pixel_array = np.random.randint(0, 4096, (64, 64), dtype=np.int16)
+        ds.WindowCenter = 2048.0
+        ds.WindowWidth = 4096.0
+
+        sys.argv = ["dcm2jpeg", str(dcm_dir), "--output", str(out_dir)]
+        with patch("dcm2jpeg.pydicom.dcmread", return_value=ds):
+            main()
+
+        assert out_dir.exists()
+        assert (out_dir / "img.jpeg").exists()
+
+    def test_happy_path(self, tmp_path: Path) -> None:
+        dcm_dir = tmp_path / "scans"
+        dcm_dir.mkdir()
+        (dcm_dir / "a.dcm").touch()
+        (dcm_dir / "b.dcm").touch()
+
+        ds = MagicMock()
+        ds.pixel_array = np.random.randint(0, 4096, (64, 64), dtype=np.int16)
+        ds.WindowCenter = 2048.0
+        ds.WindowWidth = 4096.0
+
+        sys.argv = ["dcm2jpeg", str(dcm_dir)]
+        with patch("dcm2jpeg.pydicom.dcmread", return_value=ds):
+            main()
+
+        jpeg_dir = dcm_dir / "jpeg"
+        assert jpeg_dir.exists()
+        assert (jpeg_dir / "a.jpeg").exists()
+        assert (jpeg_dir / "b.jpeg").exists()
+
+    def test_dedup_collision(self, tmp_path: Path) -> None:
+        """A file named scan_1.dcm should not collide with dedup of scan.dcm."""
+        dcm_dir = tmp_path / "scans"
+        sub = dcm_dir / "sub"
+        sub.mkdir(parents=True)
+        (dcm_dir / "scan.dcm").touch()
+        (sub / "scan.dcm").touch()
+        (dcm_dir / "scan_1.dcm").touch()
+
+        ds = MagicMock()
+        ds.pixel_array = np.random.randint(0, 4096, (64, 64), dtype=np.int16)
+        ds.WindowCenter = 2048.0
+        ds.WindowWidth = 4096.0
+
+        sys.argv = ["dcm2jpeg", str(dcm_dir)]
+        with patch("dcm2jpeg.pydicom.dcmread", return_value=ds):
+            main()
+
+        jpeg_dir = dcm_dir / "jpeg"
+        output_files = sorted(f.name for f in jpeg_dir.glob("*.jpeg"))
+        assert len(output_files) == 3
+        assert len(set(output_files)) == 3  # all unique
