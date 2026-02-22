@@ -1,0 +1,67 @@
+name: update-formula
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Compute new sha256
+        id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          archive_url="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+          curl -sL "$archive_url" -o archive.tar.gz
+          sha=$(sha256sum archive.tar.gz | awk '{print $1}')
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          echo "archive_url=$archive_url" >> "$GITHUB_OUTPUT"
+
+      - name: Update formula
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          NEW_SHA: ${{ steps.sha.outputs.sha256 }}
+          ARCHIVE_URL: ${{ steps.sha.outputs.archive_url }}
+        run: |
+          formula="Formula/dcm2jpeg.rb"
+
+          # Update the url line for the archive
+          sed -i "s|url \"https://github.com/.*/archive/refs/tags/.*\.tar\.gz\"|url \"${ARCHIVE_URL}\"|" "$formula"
+
+          # Update the sha256 on the line immediately after the archive url
+          # Uses a two-line sed address: match the archive url line, then replace the next line's sha256
+          sed -i "/archive\/refs\/tags/{ n; s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${NEW_SHA}\"/; }" "$formula"
+
+      - name: Commit and push
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add Formula/dcm2jpeg.rb
+
+          # Idempotency guard: exit early if nothing changed
+          if git diff --cached --quiet; then
+            echo "Formula already up to date"
+            exit 0
+          fi
+
+          git commit -m "Update formula sha256 for ${TAG}"
+          git push origin main

@@ -1,0 +1,114 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve tags
+        id: tags
+        run: |
+          current="${GITHUB_REF_NAME}"
+          previous=$(git tag --sort=-v:refname | grep -v "^${current}$" | head -n 1)
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "previous=${previous:-}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_TAG: ${{ steps.tags.outputs.current }}
+          PREVIOUS_TAG: ${{ steps.tags.outputs.previous }}
+        run: |
+          # Build the API payload
+          payload=$(jq -n \
+            --arg tag "$CURRENT_TAG" \
+            --arg prev "$PREVIOUS_TAG" \
+            '{tag_name: $tag} + (if $prev != "" then {previous_tag_name: $prev} else {} end)')
+
+          # Fetch raw notes from GitHub
+          raw=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+            --method POST \
+            --input - <<< "$payload" \
+            --jq '.body')
+
+          # Categorize entries into Common Changelog sections
+          added=""
+          fixed=""
+          removed=""
+          changed=""
+
+          while IFS= read -r line; do
+            # Only process lines that look like changelog entries (start with *)
+            if [[ ! "$line" =~ ^\* ]]; then
+              continue
+            fi
+
+            # Extract first word after the leading "* " prefix
+            first_word=$(echo "$line" | sed 's/^\* *//;s/ .*//' | tr '[:upper:]' '[:lower:]')
+
+            case "$first_word" in
+              add|feat|introduce|create|implement)
+                added="${added}${line}\n"
+                ;;
+              fix|bugfix|patch|correct)
+                fixed="${fixed}${line}\n"
+                ;;
+              remove|delete|drop)
+                removed="${removed}${line}\n"
+                ;;
+              *)
+                changed="${changed}${line}\n"
+                ;;
+            esac
+          done <<< "$raw"
+
+          # Build formatted notes
+          version="${CURRENT_TAG#v}"
+          date=$(date +%Y-%m-%d)
+          {
+            echo "## ${version} - ${date}"
+            echo ""
+            if [[ -n "$added" ]]; then
+              echo "### Added"
+              echo -e "$added"
+            fi
+            if [[ -n "$fixed" ]]; then
+              echo "### Fixed"
+              echo -e "$fixed"
+            fi
+            if [[ -n "$removed" ]]; then
+              echo "### Removed"
+              echo -e "$removed"
+            fi
+            if [[ -n "$changed" ]]; then
+              echo "### Changed"
+              echo -e "$changed"
+            fi
+          } > notes.md
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tags.outputs.current }}
+        run: gh release create "$TAG" --notes-file notes.md --verify-tag
