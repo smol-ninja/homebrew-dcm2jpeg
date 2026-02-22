@@ -3,8 +3,8 @@ class Dcm2jpeg < Formula
 
   desc "Convert DICOM files to JPEG"
   homepage "https://github.com/smol-ninja/homebrew-dcm2jpeg"
-  url "https://github.com/smol-ninja/homebrew-dcm2jpeg/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "59597d3d671383c6deb94ed39687dfac1cab02df8acf767820d291cea53e0cf0"
+  url "https://github.com/smol-ninja/homebrew-dcm2jpeg/archive/refs/tags/v1.1.0.tar.gz"
+  sha256 "b8c9022811c8f6f6d4ea0f2a459861db5b2e5769715f45893dc3fff755a6b0df"
   license "MIT"
 
   depends_on "numpy"
