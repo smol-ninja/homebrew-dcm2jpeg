@@ -2,9 +2,9 @@ class Dcm2jpeg < Formula
   include Language::Python::Virtualenv
 
   desc "Convert DICOM files to JPEG"
-  homepage "https://github.com/smol-ninja/dcm2jpeg"
-  url "https://github.com/smol-ninja/dcm2jpeg/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "94b123bae2043672ed711fc07d8ecf0eed4719704cb7d1e342253d232c61d732"
+  homepage "https://github.com/smol-ninja/homebrew-dcm2jpeg"
+  url "https://github.com/smol-ninja/homebrew-dcm2jpeg/archive/refs/tags/v1.0.0.tar.gz"
+  sha256 "PLACEHOLDER"
   license "MIT"
 
   depends_on "python@3.12"

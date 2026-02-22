@@ -1,0 +1,42 @@
+[project]
+name = "dcm2jpeg"
+version = "1.0.0"
+description = "Convert DICOM files to JPEG"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "smol-ninja" }]
+dependencies = [
+    "numpy>=1.24",
+    "Pillow>=10.0",
+    "pydicom>=2.4",
+]
+
+[project.scripts]
+dcm2jpeg = "dcm2jpeg:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+only-include = ["dcm2jpeg.py"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_unreachable = true
+files = ["dcm2jpeg.py", "tests"]
